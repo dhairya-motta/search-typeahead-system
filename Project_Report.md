@@ -5,17 +5,51 @@
 
 ---
 
-## 1. Architecture Explanation
+## 1. Architecture Diagram & Explanation
 
-The system is designed as a highly optimized, single-instance Node.js application that simulates a distributed microservice architecture. The data flow and structural components are built to handle high-throughput query requests efficiently.
+The system is designed as a highly optimized, single-instance Node.js application that accurately simulates the distinct components of a distributed microservice architecture. The data flow is structured to decouple heavy write-operations from latency-sensitive read-operations.
 
-### System Components
-- **Frontend Client (Vanilla JS):** A dependency-free, highly optimized client featuring a 250ms debounce function to prevent API spamming during typing. It interfaces directly with the backend REST endpoints.
-- **API Router (Express.js):** Acts as the orchestrator, receiving HTTP requests, calculating live p50/p95 latency metrics via a circular buffer middleware, and routing data to the appropriate subsystem.
-- **Prefix Trie Engine:** The core in-memory datastore. It is an N-ary tree that provides `O(L)` time complexity for prefix matching (where `L` is the length of the user's query).
-- **Distributed Cache (Consistent Hashing):** Simulates a multi-node caching layer. It utilizes an MD5 Hash Ring consisting of 3 physical nodes (`node-alpha`, `node-beta`, `node-gamma`) distributed across 300 virtual nodes (100 per server) to ensure perfectly uniform key distribution and graceful failover.
-- **Trending Service:** Uses a time-aware Sliding Window algorithm tracking the exact timestamps of search events to calculate trending spikes accurately.
-- **Batch Writer:** A volatile memory buffer sitting in front of the Trie database. It absorbs write-heavy operations and compresses duplicate searches before executing interval-based flush commits.
+### Architecture Diagram
+
+```mermaid
+graph TD
+    Client[Frontend Client (Vanilla JS)]
+    Router[Express API Layer / Telemetry]
+    
+    subgraph Caching Layer
+        Ring[Consistent Hash Ring]
+        NodeA[Virtual Nodes Alpha]
+        NodeB[Virtual Nodes Beta]
+        NodeC[Virtual Nodes Gamma]
+    end
+
+    subgraph Data & Storage Layer
+        Batch[Batch Writer Buffer]
+        Trie[(In-Memory Prefix Trie)]
+        Trend[Sliding Window Tracker]
+    end
+
+    Client -- "GET /suggest (Debounced)" --> Router
+    Router -- "Check Cache" --> Ring
+    Ring --> NodeA & NodeB & NodeC
+    Ring -- "Cache Miss" --> Trie
+    
+    Client -- "POST /search" --> Router
+    Router -- "Log Query" --> Batch
+    Batch -- "Flush (+N count) every 5s" --> Trie
+    
+    Router -- "GET /trending" --> Trend
+    Trie -- "Sync Data" --> Trend
+```
+
+### Core System Components Expanded
+
+- **Frontend Client (Vanilla JS):** A dependency-free, highly optimized client featuring a 250ms debounce function. It ensures that the API is not spammed by firing requests only after the user pauses typing. The frontend also establishes live polling connections to render system topology and telemetry asynchronously.
+- **API Router & Telemetry (Express.js):** Acts as the central orchestrator. Beyond simple routing, it implements a circular buffer middleware capable of intercepting requests to calculate rolling `p50` and `p95` latency metrics on the fly without blocking the event loop.
+- **Prefix Trie Engine:** The core database. Because autocomplete is fundamentally a prefix-matching problem, traditional relational databases (SQL) are too slow. We implemented a custom N-ary tree structure that guarantees `O(L)` time complexity for prefix matching (where `L` is the exact length of the user's query).
+- **Distributed Cache (Consistent Hashing):** Simulates a multi-node caching layer to absorb the vast majority of read traffic. It utilizes an MD5 Hash Ring consisting of 3 physical nodes (`node-alpha`, `node-beta`, `node-gamma`). To prevent "hotspotting" (where one node holds 80% of data), we map 100 "Virtual Nodes" per physical server, ensuring a perfectly uniform 33% distribution across the ring. If a node fails, the ring gracefully falls back to the nearest healthy neighbor.
+- **Trending Service:** Uses a time-aware Sliding Window algorithm. It maps queries to an array of specific timestamps to track search velocity and calculates trending spikes accurately, discarding any historical data older than 24 hours.
+- **Batch Writer Pipeline:** A volatile memory buffer sitting in front of the Trie database. It absorbs write-heavy operations and compresses duplicate searches. Instead of writing 100 individual increments for a viral query, it buffers them in RAM and commits a single bulk update every 5 seconds, heavily reducing database lock contention.
 
 ---
 
