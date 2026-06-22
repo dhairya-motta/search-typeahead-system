@@ -11,35 +11,28 @@ The system is designed as a highly optimized, single-instance Node.js applicatio
 
 ### Architecture Diagram
 
-```mermaid
-graph TD
-    Client[Frontend Client (Vanilla JS)]
-    Router[Express API Layer / Telemetry]
-    
-    subgraph Caching Layer
-        Ring[Consistent Hash Ring]
-        NodeA[Virtual Nodes Alpha]
-        NodeB[Virtual Nodes Beta]
-        NodeC[Virtual Nodes Gamma]
-    end
-
-    subgraph Data & Storage Layer
-        Batch[Batch Writer Buffer]
-        Trie[(In-Memory Prefix Trie)]
-        Trend[Sliding Window Tracker]
-    end
-
-    Client -- "GET /suggest (Debounced)" --> Router
-    Router -- "Check Cache" --> Ring
-    Ring --> NodeA & NodeB & NodeC
-    Ring -- "Cache Miss" --> Trie
-    
-    Client -- "POST /search" --> Router
-    Router -- "Log Query" --> Batch
-    Batch -- "Flush (+N count) every 5s" --> Trie
-    
-    Router -- "GET /trending" --> Trend
-    Trie -- "Sync Data" --> Trend
+```text
+ ┌─────────────────────┐             ┌─────────────────────┐
+ │   Frontend Client   │             │  Trending Service   │
+ │    (Vanilla JS)     │             │  (Sliding Window)   │
+ └─────────┬───────────┘             └─────────▲───────────┘
+           │ 1. GET /suggest                   │ 8. Sync
+           │ 4. POST /search                   │
+ ┌─────────▼───────────┐             ┌─────────┴───────────┐
+ │ Express API Layer & │  7. GET     │ Prefix Trie Engine  │
+ │ Telemetry Router    ├────────────►│ (In-Memory Storage) │
+ └────┬───────────┬────┘             └─────────▲───────────┘
+      │           │                            │
+      │ 2. Check  │ 5. Log Search              │ 6. Flush Batch
+ ┌────▼────┐ ┌────▼────────────────┐           │
+ │  Cache  │ │ Batch Writer Buffer ├───────────┘
+ └────┬────┘ └─────────────────────┘
+      │
+      │ 3. Consistent Hash Ring Routing
+      ├───────────┬───────────┐
+ ┌────▼────┐ ┌────▼────┐ ┌────▼────┐
+ │ Node A  │ │ Node B  │ │ Node C  │
+ └─────────┘ └─────────┘ └─────────┘
 ```
 
 ### Core System Components Expanded
