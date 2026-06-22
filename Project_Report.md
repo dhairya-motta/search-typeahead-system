@@ -14,6 +14,13 @@
     color: #000000 !important;
     font-weight: 900 !important;
   }
+  pre, code {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    white-space: pre !important;
+    font-size: 11px !important;
+    font-family: 'Courier New', Courier, monospace !important;
+  }
 </style>
 
 ---
