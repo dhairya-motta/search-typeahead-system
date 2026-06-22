@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniSearch Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <h1>OmniSearch</h1>
+        </div>
+        <nav class="main-nav">
+          <button class="nav-btn active" id="navSearch" onclick="showTab('search')">Search</button>
+          <button class="nav-btn" id="navTrending" onclick="showTab('trending')">Trending</button>
+          <button class="nav-btn" id="navCache" onclick="showTab('cache')">Cache Ring</button>
+          <button class="nav-btn" id="navMetrics" onclick="showTab('metrics')">Telemetry</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- SEARCH TAB -->
+      <section id="tabSearch" class="tab-section active">
+        <div class="hero">
+          <h2>Navigate the <span class="accent-text">infinite scale</span></h2>
+          <p>Powered by Prefix Tries · Distributed Cache · Sliding Window Trends</p>
+        </div>
+
+        <div class="search-container">
+          <div class="mode-toggles">
+            <button class="mode-btn active" id="modeBasic" onclick="setMode('basic')">📊 Basic Score</button>
+            <button class="mode-btn" id="modeEnhanced" onclick="setMode('enhanced')">🔥 Hot Trends</button>
+          </div>
+
+          <div class="input-wrapper" id="inputWrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Search the cosmos..." autocomplete="off">
+            <button id="searchBtn" onclick="submitSearch()">Explore</button>
+          </div>
+
+          <div class="dropdown hidden" id="suggestionsDropdown">
+            <div class="dropdown-header">
+              <span>Suggestions</span>
+              <span id="suggModeIndicator"></span>
+            </div>
+            <div class="dropdown-content" id="suggestionsList"></div>
+          </div>
+        </div>
+
+        <div class="feature-cards">
+          <div class="feature-card" onclick="showTab('cache')">
+            <div class="f-icon">⚙️</div>
+            <h3>Consistent Hashing</h3>
+            <p>100 virtual nodes across 3 physical servers mapping hashes flawlessly.</p>
+          </div>
+          <div class="feature-card" onclick="showTab('trending')">
+            <div class="f-icon">📈</div>
+            <h3>Sliding Window</h3>
+            <p>24-hour real-time trending multipliers adapting instantly to bursts.</p>
+          </div>
+          <div class="feature-card" onclick="showTab('metrics')">
+            <div class="f-icon">⚡</div>
+            <h3>Batch Write Ops</h3>
+            <p>Compresses thousands of database updates into interval-based chunks.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRENDING TAB -->
+      <section id="tabTrending" class="tab-section hidden">
+        <div class="tab-head">
+          <h2>🔥 Live Trending Explorer</h2>
+          <button class="action-btn" onclick="loadTrending()">Refresh Data</button>
+        </div>
+        
+        <div class="trending-controls">
+          <span>Ranking Algorithm:</span>
+          <button class="mode-btn active" id="trendModeBasic" onclick="setTrendMode('basic')">Basic (Counts)</button>
+          <button class="mode-btn" id="trendModeEnhanced" onclick="setTrendMode('enhanced')">Enhanced (Window)</button>
+        </div>
+
+        <div class="trending-grid" id="trendingGrid">
+          <div class="spinner"></div>
+        </div>
+
+        <div class="explanation-box">
+          <h3>Algorithm: 24-Hour Sliding Window</h3>
+          <code>score = historicalCount + (searchesInLast24Hrs × 5)</code>
+          <p>Unlike exponential decay, this true sliding window cleanly drops events exactly after 24 hours, guaranteeing sharp spike resolution without lingering mathematical tails.</p>
+        </div>
+      </section>
+
+      <!-- CACHE TAB -->
+      <section id="tabCache" class="tab-section hidden">
+        <div class="tab-head">
+          <h2>⚙️ Distributed Cache Topology</h2>
+          <p>Real-time node health, ring distribution, and memory buffers.</p>
+        </div>
+
+        <div class="cache-split">
+          <div class="ring-panel">
+            <h3>Consistent Hash Ring</h3>
+            <div class="canvas-wrap">
+              <canvas id="ringCanvas" width="300" height="300"></canvas>
+            </div>
+            <div class="ring-legend" id="ringLegend"></div>
+          </div>
+
+          <div class="debug-panel">
+            <h3>Debug Prefix Router</h3>
+            <div class="debug-controls">
+              <input type="text" id="debugPrefix" placeholder="Test a prefix..." />
+              <button class="action-btn" onclick="debugCacheRoute()">Route</button>
+            </div>
+            <div class="debug-output" id="debugOutput">Output will appear here...</div>
+          </div>
+        </div>
+
+        <div class="nodes-panel">
+          <h3>Cluster Nodes</h3>
+          <div class="nodes-grid" id="nodesGrid"></div>
+        </div>
+
+        <div class="buffer-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Write Buffer</h3>
+            <button class="action-btn small" onclick="loadBuffer()">Refresh</button>
+          </div>
+          <div id="bufferStats" class="buffer-stats"></div>
+          <div class="buffer-table" id="bufferTable"></div>
+        </div>
+      </section>
+
+      <!-- METRICS TAB -->
+      <section id="tabMetrics" class="tab-section hidden">
+        <div class="tab-head">
+          <h2>⚡ System Telemetry</h2>
+          <p>Global architecture flow and performance percentiles.</p>
+        </div>
+
+        <div class="metrics-grid" id="metricsGrid">
+          <div class="spinner"></div>
+        </div>
+
+        <div class="arch-box">
+          <h3>Request Flow Topology</h3>
+          <div class="arch-diagram">
+            <div class="layer">
+              <strong>Vanilla JS Client</strong>
+              <small>Debouncer, State Management</small>
+            </div>
+            <div class="arrow">↓ HTTP JSON ↓</div>
+            <div class="layer">
+              <strong>Express API</strong>
+              <small>Latency interceptors, Routers</small>
+            </div>
+            <div class="arrow">↓ Internal Bus ↓</div>
+            <div class="layer flex-layer">
+              <div class="component"><strong>PrefixTrie</strong><br>O(L) Search</div>
+              <div class="component"><strong>SlidingTracker</strong><br>Time Series Data</div>
+              <div class="component"><strong>BatchWriter</strong><br>I/O Compressor</div>
+            </div>
+            <div class="arrow">↓ MD5 Hash Ring ↓</div>
+            <div class="layer">
+              <strong>Distributed Cache Manager</strong>
+              <small>node-alpha | node-beta | node-gamma</small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

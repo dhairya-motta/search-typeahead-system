@@ -1,0 +1,16 @@
+{
+  "name": "typeahead-system-custom",
+  "version": "1.0.0",
+  "description": "Full-stack search typeahead system",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "generate": "node data/generate_dataset.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  }
+}
